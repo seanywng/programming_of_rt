@@ -1,0 +1,6 @@
+"0","  paint <- lf + 
+    (mf + 2.3) * (gate >= .52 & gate < .58) + 
+    (hf + 6.1) * (gate >= .233)
+"
+"2","Error: object 'lf' not found
+"

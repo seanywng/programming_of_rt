@@ -1,0 +1,8 @@
+"0",""
+"0","library(dplyr)"
+"0","library(purrr)"
+"0","library(tibble)"
+"0","library(ggplot2)"
+"0","library(ggthemes)"
+"0","library(ambient)"
+"2","Warning: package ‘ambient’ was built under R version 4.4.2"

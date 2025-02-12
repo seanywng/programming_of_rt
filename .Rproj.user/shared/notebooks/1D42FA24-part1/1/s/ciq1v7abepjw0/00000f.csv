@@ -1,0 +1,4 @@
+"0","dat <- sample_data(n = 100, seed = 1) z
+"
+"2","Error: unexpected symbol in ""dat <- sample_data(n = 100, seed = 1) z""
+"
