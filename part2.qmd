@@ -15,6 +15,137 @@ library(ambient)
 
 ```
 
+# Functions
+
+```{r}
+sample_canva <- function(seed = NULL) {
+  if(!is.null(seed)) set.seed(seed)
+  sample(ggthemes::canva_palettes, 1)[[1]]
+}
+
+sample_data <- function(seed = NULL, n = 100){
+  if(!is.null(seed)) set.seed(seed)
+  dat <- tibble(
+    x0 = runif(n),
+    y0 = runif(n),
+    x1 = x0 + runif(n, min = -.2, max = .2),
+    y1 = y0 + runif(n, min = -.2, max = .2),
+    shade = runif(n), 
+    size = runif(n),
+    shape = factor(sample(0:22, size = n, replace = TRUE))
+  )
+}
+
+sample_cross_matrix <- function(n = 10, seed = NULL) {
+  if(!is.null(seed)) set.seed(seed)
+  mat <- matrix(data = 0, nrow = n, ncol = n)
+  mat[sample(n, 1), ] <- 1
+  mat[, sample(n, 1)] <- 1
+  return(mat)
+}
+
+blank_canvas_big <- long_grid(
+  x = seq(from = 0, to = 1, length.out = 10000),
+  y = seq(from = 0, to = 1, length.out = 10000)
+) 
+
+blank_canvas <- long_grid(
+  x = seq(from = 0, to = 1, length.out = 2000),
+  y = seq(from = 0, to = 1, length.out = 2000)
+) 
+
+plot_painted_canvas <- function(canvas, palette = NULL) {
+  if(is.null(palette)) {
+    palette <- c("#e5ddc8","#01949a","#004369","#db1f48")
+  }
+  canvas |> 
+    ggplot(aes(x, y, fill = paint)) + 
+    geom_raster(show.legend = FALSE) +
+    theme_void() +
+    coord_equal() +
+    scale_x_continuous(expand = c(0, 0)) +
+    scale_y_continuous(expand = c(0, 0)) +
+    scale_fill_gradientn(colours = palette)
+}
+
+make_noise_art <- function(
+    
+  generator = gen_perlin,
+  frequency = 10, 
+  seed = 1234, 
+  pixels = 2000, 
+  palette = c("#e5ddc8", "#01949a", "#004369", "#db1f48"),
+  ...
+) {
+  # define the grid
+  canvas <- long_grid(
+    x = seq(from = 0, to = 1, length.out = pixels), 
+    y = seq(from = 0, to = 1, length.out = pixels)
+  )
+  
+  # use the generator to add paint
+  canvas <- canvas |> 
+    mutate(
+      paint = generator(
+        x, y, frequency = frequency, 
+        seed = seed,
+        ...
+      )
+    )
+  
+  #  use ggplot to draw the picture
+  art <- canvas |> 
+    ggplot(aes(x, y, fill = paint)) + 
+    geom_raster(show.legend = FALSE) + 
+    theme_void() + 
+    coord_equal() + 
+    scale_x_continuous(expand = c(0, 0)) + 
+    scale_y_continuous(expand = c(0, 0)) + 
+    scale_fill_gradientn(colours = palette) 
+  
+  return(art)
+}
+
+
+fractal_art <- function(fractal, generator, palette = NULL, ...) {
+  blank_canvas |> 
+    mutate(
+      paint = fracture(
+        noise = generator, 
+        fractal = fractal, 
+        x = x,
+        y = y, 
+        ...
+      )
+    ) |> 
+    plot_painted_canvas(palette = palette)
+}
+
+fractal_art_big <- function(fractal, generator, palette = NULL, ...) {
+  blank_canvas_big |> 
+    mutate(
+      paint = fracture(
+        noise = generator, 
+        fractal = fractal, 
+        x = x,
+        y = y, 
+        ...
+      )
+    ) |> 
+    plot_painted_canvas(palette = palette)
+}
+
+
+gen_scope <- function(x, y, ...) {
+  worley_cell <- gen_worley(x, y, value = "cell", ...)
+  worley_dist <- gen_worley(x, y, value = "distance", ...)
+  return(normalise(worley_cell) + 5 * normalise(worley_dist))
+}
+
+
+```
+
+
 ```{r}
 sample_canva <- function(seed = NULL) {
   if(!is.null(seed)) set.seed(seed)
@@ -150,6 +281,11 @@ make_noise_art(seed = 1234, frequency = 29.4, palette = sample_canva(seed = 157)
 ```
 
 ```{r}
+blank_canvas_big <- long_grid(
+  x = seq(from = 0, to = 1, length.out = 10000),
+  y = seq(from = 0, to = 1, length.out = 10000)
+) 
+
 blank_canvas <- long_grid(
   x = seq(from = 0, to = 1, length.out = 2000),
   y = seq(from = 0, to = 1, length.out = 2000)
@@ -226,25 +362,81 @@ blank_canvas |>
 
 ```
 
+
 ```{r}
-# Life
 blank_canvas |> 
   mutate(
     lf_noise = gen_simplex(x, y, frequency = 1),
-    mf_noise = gen_simplex(x, y, frequency = 20),
-    hf_noise = gen_simplex(x, y, frequency = 99),
-    gate = gen_simplex(x, y, frequency = 10) |> normalise(),
+    mf_noise = gen_simplex(x, y, frequency = 49),
+    hf_noise = gen_simplex(x, y, frequency = 89),
+    gate = gen_simplex(x, y, frequency = 19) |> normalise(),
     paint = lf_noise +
-      (2.3 + mf_noise) * (gate >= .52 & gate < .58) +
-      (1.1 + hf_noise) * (gate >= .233)
+      (4.25 + mf_noise) * (gate >= .51 & gate < .14) +
+      (.97 + hf_noise) * (gate >= .38)
   ) |>
   plot_painted_canvas(palette = sample_canva(seed = 47))
 ```
 
 
 ```{r}
-# Growth
+# Life
+blank_canvas_big |> 
+  mutate(
+    lf_noise = gen_simplex(x, y, frequency = 1),
+    mf_noise = gen_simplex(x, y, frequency = 20),
+    hf_noise = gen_simplex(x, y, frequency = 399),
+    gate = gen_simplex(x, y, frequency = 10) |> normalise(),
+    paint = lf_noise +
+      (2.3 + mf_noise) * (gate >= .51 & gate < .54) +
+      (1.1 + hf_noise) * (gate >= .273)
+  ) |>
+  plot_painted_canvas(palette = sample_canva(seed = 47))
+
 blank_canvas |> 
+  mutate(
+    lf_noise = gen_simplex(x, y, frequency = 1),
+    mf_noise = gen_perlin(x, y, frequency = 49),
+    hf_noise = gen_simplex(x, y, frequency = 89),
+    gate = gen_simplex(x, y, frequency = 19) |> normalise(),
+    paint = lf_noise +
+      (4.25 + mf_noise * 2) * (gate >= .51 & gate < .14) +
+      (1.37 + hf_noise) * (gate >= .38)
+  ) |>
+  plot_painted_canvas(palette = sample_canva(seed = 47))
+```
+
+
+# Life 
+
+```{r}
+
+life_gate <- function(x, y, frequency, ...) {
+  lf_noise <- gen_simplex(x, y, frequency = frequency, ...)
+  mf_noise <- gen_simplex(x, y, frequency = 20)
+  hf_noise <- gen_simplex(x, y, frequency = frequency * 99) 
+  gate <- gen_simplex(x, y, frequency = frequency * 10, ...)
+  gate <- normalise(gate)
+  paint <- lf_noise + 
+    (4.25 + mf_noise * 2) * (gate >= .51 & gate < .14) +
+    (.97 + hf_noise) * (gate >= .38)
+  return(paint)
+
+  }
+
+life <- fractal_art_big(billow, life_gate, palette = sample_canva(seed = 47), seed = 1009, octaves = 10)
+
+```
+
+
+```{r}
+ggsave("./plots/life.png", height = 10000, width = 10000, units = "px")
+```
+
+## Growth
+
+```{r}
+# Growth
+blank_canvas_big |> 
   mutate(
     lf_noise = gen_simplex(x, y, frequency = 1),
     mf_noise = gen_simplex(x, y, frequency = 20),
@@ -255,8 +447,27 @@ blank_canvas |>
       (2.1 + hf_noise) * (gate >= .19)
   ) |>
   plot_painted_canvas(palette = sample_canva(seed = 47))
+
+ggsave("./plots/growth.png", height = 10000, width = 10000, units = "px")
 ```
 
+  
+```{r}
+blank_canvas_big |> 
+  mutate(
+    lf_noise = gen_simplex(x, y, frequency = 1),
+    mf_noise = gen_simplex(x, y, frequency = 39),
+    hf_noise = gen_simplex(x, y, frequency = 106),
+    gate = gen_simplex(x, y, frequency = 10) |> normalise(),
+    paint = lf_noise +
+      (2.24 + mf_noise) * (gate >= .12 & gate < .55) +
+      (2.13 + hf_noise) * (gate >= .19)
+  ) |>
+  plot_painted_canvas(palette = sample_canva(seed = 47))
+
+ggsave("./plots/growth1.png", height = 10000, width = 10000, units = "px")
+```
+  
   
 # Fractals 
 
@@ -335,6 +546,20 @@ ggplot(dat) + geom_path(aes(x, y20))
 ```{r}
 fractal_art <- function(fractal, generator, palette = NULL, ...) {
   blank_canvas |> 
+    mutate(
+      paint = fracture(
+        noise = generator, 
+        fractal = fractal, 
+        x = x,
+        y = y, 
+        ...
+      )
+    ) |> 
+    plot_painted_canvas(palette = palette)
+}
+
+fractal_art_big <- function(fractal, generator, palette = NULL, ...) {
+  blank_canvas_big |> 
     mutate(
       paint = fracture(
         noise = generator, 
@@ -503,6 +728,8 @@ gen_gate2 <- function(x, y, frequency, ...) {
 fractal_art(billow, gen_gate2, palette = sample_canva(seed = 47), seed = 19, octaves = 10)
 ```
 
+# Corruption 
+
 ```{r}
 
 # Corruption
@@ -521,12 +748,280 @@ gen_gate3 <- function(x, y, frequency, ...) {
   }
 
 fractal_art(billow, gen_gate3, palette = sample_canva(seed = 47), seed = 19, octaves = 10)
+
+fractal_art_big(billow, gen_gate3, palette = sample_canva(seed = 47), seed = 19, octaves = 10)
+
+ggsave("./plots/corruption.png", height = 10000, width = 10000, unit = "px")
+```
+   
+## Curl
+
+   
+```{r}
+smol_grid <- long_grid(x = 1:20, y = 1:20)
+
+ggplot(smol_grid) + 
+  geom_point(aes(x, y), colour = "black") + 
+  theme_void() + 
+  coord_equal()
+```
+   
+```{r}
+smol_simplex <- smol_grid |> 
+  mutate(z = gen_simplex(x, y, seed = 1, frequency = .1))
+
+smol_simplex |> 
+  ggplot(aes(x = x, y = y, size = z)) + 
+  geom_point(show.legend = FALSE) + 
+  theme_void() + 
+  coord_equal()
+
+smol_simplex |>
+  ggplot(aes(x, y, z = z)) +
+  geom_contour_filled(show.legend = FALSE, bins = 10) + 
+  theme_void() + 
+  coord_equal()
 ```
    
    
    
+```{r}
+eps <- .001
+
+smol_curl <- smol_grid |> 
+  mutate(
+    x_add = gen_simplex(x + eps, y, seed = 1, frequency = .1),
+    x_sub = gen_simplex(x - eps, y, seed = 1, frequency = .1), 
+    y_add = gen_simplex(x, y + eps, seed = 1, frequency = .1), 
+    y_sub = gen_simplex(x, y - eps, seed = 1, frequency = .1), 
+    x_slope = (x_add - x_sub) / (2 * eps), 
+    y_slope = (y_add - y_sub) / (2 * eps), 
+    x_curl = -y_slope, 
+    y_curl = x_slope
+  )
+
+```
    
    
+```{r}
+smol_curl |> 
+  ggplot() + 
+  geom_segment(aes(x = x, 
+                   y = y, 
+                   xend = x + x_slope * 2, 
+                   yend = y + y_slope * 2), 
+               arrow = arrow(length = unit(0.1, "cm"))) + 
+  theme_void() +
+  coord_equal()
+  
+smol_curl |> 
+  ggplot() + 
+  geom_segment(aes(x = x, 
+                   y = y, 
+                   xend = x + x_curl * 2, 
+                   yend = y + y_curl * 2), 
+               arrow = arrow(length = unit(0.1, "cm"))) + 
+  theme_void() + 
+  coord_equal()
+```
    
+
+```{r}
+curl <- 
+  curl_noise(
+    generator = gen_simplex, 
+    seed = 1, 
+    frequency = .1, 
+    x = smol_grid$x, 
+    y = smol_grid$y
+  )
+
+curl |> as_tibble()
+
+```
+   
+```{r}
+smol_grid |> 
+  mutate(
+    x2 = x + curl$x * 2, 
+    y2 = y + curl$y * 2
+  ) |> 
+  ggplot() + 
+  geom_segment(
+    aes(x, y, xend = x2, yend = y2), 
+    arrow = arrow(length = unit(0.1, "cm"))) + 
+  theme_void() + 
+  coord_equal()
+
+```
+   
+```{r}
+update_curl <- function(current_state, step_size = .0005, ...) {
+  curl <- curl_noise(
+    x = current_state$x, 
+    y = current_state$y, 
+    ...
+  )
+  
+  next_state <- current_state |> 
+    mutate(
+      x = x + curl$x * step_size, 
+      y = y + curl$y * step_size, 
+      time = time + 1
+    )
+  
+  return(next_state)
+}
+```
+   
+   
+```{r}
+coords <- seq(0, 1, length.out = 50)
+
+time_1 <- long_grid(x = coords, y = coords) |> 
+  mutate(id = row_number(), time = 1)
+
+time_2 <- time_1 |> 
+  update_curl(
+    generator = gen_simplex, 
+    frequency = 10, 
+    seed = 1234
+  )
+
+time_3 <- time_2 |> 
+  update_curl(
+    generator = gen_simplex, 
+    frequency = 10, 
+    seed = 1234
+  )
+```
+   
+```{r}
+dat12 <- bind_rows(time_1, time_2)
+
+dat123 <- bind_rows(time_1, time_2, time_3)
+
+dat12 |> 
+  ggplot(aes(x, y, group = id)) + 
+  geom_path() + 
+  theme_void() + 
+  coord_equal()
+
+dat123 |> 
+  ggplot(aes(x, y, group = id)) + 
+  geom_path() + 
+  theme_void() + 
+  coord_equal()
+```
+   
+   
+```{r}
+curl_data <- function(
+    data, 
+    iterations = 50, 
+    step_size = .001, 
+    ...) {
+  
+  update <- function(current_state, iteration, ...) {
+    curl <- curl_noise(
+      x = current_state$x, 
+      y = current_state$y, 
+      generator = fracture, 
+      ...
+    )
+    
+    next_state <- current_state |> 
+      mutate(
+        x = x + curl$x * step_size, 
+        y = y + curl$y * step_size, 
+        time = time + 1
+      )
+    
+    return(next_state)
+  }
+  
+  data |> 
+    mutate(id = row_number(), time = 1) |> 
+    accumulate(1:iterations, update, .init = _, ...) |> 
+    bind_rows()
+}
+
+curl_art <- function(...) {
+  curl_data(...) |> 
+    ggplot(aes(x, y, group = id)) + 
+    geom_path() + 
+    theme_void() + 
+    coord_equal() 
+}
+```
+
+```{r}
+smol_grid |> 
+  mutate(x = normalise(x), y = normalise(y)) |> 
+  curl_art(noise = gen_simplex, 
+           fractal = fbm, 
+           octaves = 4, 
+           freq_init = .5)
+```
+
+```{r}
+circle <- function(n = 100) {
+  tibble(
+    theta = 2 * pi * (1:n) / n, 
+    x = cos(theta), 
+    y = sin(theta)
+  )
+}
+
+curl_circle <- function(octaves) {
+  curl_art(
+    data = circle(500), 
+    iterations = 100, 
+    noise = gen_simplex, 
+    fractal = fbm, 
+    octaves = octaves, 
+    seed = 1, 
+    frequency = ~ . * 1.2, 
+    gain_init = 1, 
+    gain = ~ . * .9, 
+    step_size = .003
+  )
+}
+
+curl_circle(octaves = 8)
+```
+
+   
+
+```{r}
+custom_curl_data <- function(data) {
+  curl_data(
+    data = data,
+    iterations = 80, 
+    octaves = 10,
+    fractal = ridged,
+    noise = gen_cubic,
+    freq_init = 1,
+    frequency = ~ . * 1.2,
+    gain_init = 1,
+    gain = ~ . * .9,
+    seed = 1
+  )
+}
+
+dat1 <- circle(5000) |> 
+  custom_curl_data()
+
+dat2 <- circle(5000) |> 
+  mutate(x = x * .99, 
+         y = y * .99) |> 
+  custom_curl_data()
+
+ggplot(mapping = aes(x, y, group = time)) + 
+  geom_polygon(data = dat1, fill = "#22222210") + 
+  geom_polygon(data = dat2, fill = "#ffffff05") +
+  theme_void() + 
+  coord_equal()
+```
    
    
